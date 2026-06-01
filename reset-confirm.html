@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choose New Password - Note Maker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="subject-page">
+  <main class="login-page">
+    <section class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark" aria-hidden="true">G</div>
+        <div>
+          <h1>New Password</h1>
+          <p>Choose a new password for your Note Maker account</p>
+        </div>
+      </div>
+
+      <form id="resetConfirmForm">
+        <div>
+          <label for="password">New password</label>
+          <input id="password" type="password" autocomplete="new-password" required>
+        </div>
+        <p class="login-error" id="resetConfirmMessage" role="alert"></p>
+        <div class="actions">
+          <a class="secondary auth-link" href="login.html">Back to login</a>
+          <button class="primary" type="submit">Reset password</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="reset-confirm.js"></script>
+</body>
+</html>

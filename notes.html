@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Notes - Note Maker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="subject-page">
+  <main class="subject-picker notes-page">
+    <header class="picker-header">
+      <div>
+        <p class="eyebrow">My notes</p>
+        <h1 id="notesPageTitle">English Language Notes</h1>
+      </div>
+      <div class="header-actions">
+        <a class="back-link" id="backToEditor" href="index.html?subject=English%20Language">Back to editor</a>
+        <a class="back-link" href="/logout">Logout</a>
+      </div>
+    </header>
+
+    <section class="notes-browser">
+      <nav class="notes-subject-tabs" id="notesSubjectTabs" aria-label="Note subjects"></nav>
+      <div class="notes-browser-tools">
+        <label for="notesSearch">Search this subject</label>
+        <input id="notesSearch" type="search" placeholder="Search notes">
+      </div>
+      <div class="notes-tab-list" id="notesTabList" aria-label="Notes"></div>
+    </section>
+  </main>
+
+  <script src="notes.js"></script>
+  <script src="page-state.js"></script>
+</body>
+</html>

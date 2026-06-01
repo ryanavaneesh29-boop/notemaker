@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account - Note Maker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="subject-page">
+  <main class="login-page">
+    <section class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark" aria-hidden="true">G</div>
+        <div>
+          <h1>Create Account</h1>
+          <p>Use an email so your notes can save to your account</p>
+        </div>
+      </div>
+
+      <form id="registerForm">
+        <div>
+          <label for="username">Username</label>
+          <input id="username" autocomplete="username" required>
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" required>
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="new-password" required>
+        </div>
+        <p class="login-error" id="registerError" role="alert"></p>
+        <div class="actions">
+          <a class="secondary auth-link" href="login.html">Back to login</a>
+          <button class="primary" type="submit">Create account</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="register.js"></script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Note Maker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="sidebar" aria-label="Subjects">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">G</div>
+      <div>
+          <h1>Note Maker</h1>
+        <p>Subject revision desk</p>
+      </div>
+    </div>
+
+    <button class="new-note" id="newNoteButton" type="button">
+      <span aria-hidden="true">+</span>
+      New note
+    </button>
+
+    <a class="add-subject-link" href="subjects.html">
+      <span aria-hidden="true">+</span>
+      Add subject
+    </a>
+
+    <a class="add-subject-link" href="/logout">Logout</a>
+
+    <nav class="subject-list" id="subjectList" aria-label="GCSE subjects"></nav>
+  </aside>
+
+  <main class="workspace">
+    <section class="topbar" aria-label="Current subject tools">
+      <div>
+        <p class="eyebrow">Current subject</p>
+        <h2 id="subjectTitle">English Language</h2>
+      </div>
+      <div class="topbar-tools">
+        <a class="my-notes-button" id="myNotesLink" href="notes.html?subject=English%20Language">My notes</a>
+        <a class="syllabus-link" id="syllabusLink" href="syllabus.html?subject=English%20Language">View syllabus</a>
+      </div>
+    </section>
+
+    <section class="desk">
+      <article class="editor-panel">
+        <form id="noteForm">
+          <div class="form-row two-col">
+            <div>
+              <label for="noteTitle">Title</label>
+              <input id="noteTitle" type="text" placeholder="Paper 1 creative writing plan" required>
+            </div>
+            <div>
+              <label for="noteTopic">Topic</label>
+              <select id="noteTopic"></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label for="noteContent">Notes</label>
+            <div class="doc-shell">
+              <div class="doc-toolbar" aria-label="Document tools">
+                <div class="toolbar-group">
+                  <button type="button" data-command="undo" title="Undo">Undo</button>
+                  <button type="button" data-command="redo" title="Redo">Redo</button>
+                </div>
+                <div class="toolbar-group">
+                  <button type="button" data-command="bold" title="Bold"><strong>B</strong></button>
+                  <button type="button" data-command="italic" title="Italic"><em>I</em></button>
+                  <button type="button" data-command="underline" title="Underline"><span class="underline-tool">U</span></button>
+                  <button type="button" data-command="superscript" title="Superscript">x<sup>2</sup></button>
+                  <button type="button" data-command="subscript" title="Subscript">x<sub>2</sub></button>
+                </div>
+                <div class="toolbar-group">
+                  <button type="button" data-command="insertUnorderedList" title="Bullet list">Bullets</button>
+                  <button type="button" data-command="insertOrderedList" title="Numbered list">1. List</button>
+                  <button type="button" data-command="justifyLeft" title="Align left">Left</button>
+                  <button type="button" data-command="justifyCenter" title="Centre">Centre</button>
+                  <button type="button" data-command="justifyRight" title="Align right">Right</button>
+                </div>
+                <div class="toolbar-group">
+                  <button type="button" data-command="formatBlock" data-value="h3" title="Heading">Heading</button>
+                  <button type="button" data-command="formatBlock" data-value="p" title="Normal text">Text</button>
+                  <select id="fontSizeSelect" title="Font size" aria-label="Font size">
+                    <option value="">Size</option>
+                    <option value="2">Small</option>
+                    <option value="3">Normal</option>
+                    <option value="5">Large</option>
+                    <option value="6">Title</option>
+                  </select>
+                </div>
+                <div class="toolbar-group">
+                  <label class="colour-tool" for="textColour">Text <input id="textColour" type="color" value="#17202a"></label>
+                  <label class="colour-tool" for="highlightColour">Highlight <input id="highlightColour" type="color" value="#fff2a8"></label>
+                  <button type="button" data-command="removeFormat" title="Clear formatting">Clear</button>
+                </div>
+                <div class="toolbar-group">
+                  <select id="mathInsertSelect" title="Insert maths or science" aria-label="Insert maths or science">
+                    <option value="">Insert</option>
+                    <option value="^2">Power 2</option>
+                    <option value="^3">Power 3</option>
+                    <option value="sqrt()">Square root</option>
+                    <option value="pi">Pi</option>
+                    <option value="+/-">Plus/minus</option>
+                    <option value="&lt;=">Less than or equal</option>
+                    <option value="&gt;=">Greater than or equal</option>
+                    <option value="E = mc^2">E = mc^2</option>
+                    <option value="v^2 - u^2 = 2as">v^2 - u^2 = 2as</option>
+                  </select>
+                </div>
+              </div>
+              <div class="document-page" id="noteContent" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Write your English Language revision notes here..."></div>
+            </div>
+          </div>
+
+          <div class="form-row two-col">
+            <div>
+              <label for="notePriority">Priority</label>
+              <select id="notePriority">
+                <option value="Core">Core</option>
+                <option value="Needs practice">Needs practice</option>
+                <option value="Exam ready">Exam ready</option>
+              </select>
+            </div>
+            <div>
+              <label for="noteExamDate">Exam date</label>
+              <input id="noteExamDate" type="date">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="secondary" id="deleteNoteButton" type="button">Delete</button>
+            <button class="secondary" id="clearFormButton" type="button">Clear</button>
+            <button class="primary" type="submit">Save note</button>
+          </div>
+        </form>
+      </article>
+    </section>
+  </main>
+
+  <script src="page-state.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
