@@ -3,6 +3,7 @@ from flask import Flask, jsonify, redirect, request, send_from_directory
 import base64
 import hashlib
 import hmac
+import json
 import os
 import secrets
 import smtplib
@@ -12,21 +13,16 @@ from email.message import EmailMessage
 
 
 ROOT = Path(__file__).resolve().parent
-DB_PATH = Path(os.environ.get("NOTE_MAKER_DB", ROOT / "revision.db"))
+DB_PATH = Path(os.environ.get("NOTE_MAKER_DB", ROOT / "data" / "revision.db"))
 SESSION_SECONDS = 60 * 60 * 24 * 30
 PUBLIC_FILES = {
     "login.html",
-    "login.js",
     "register.html",
-    "register.js",
     "reset.html",
-    "reset.js",
     "reset-confirm.html",
-    "reset-confirm.js",
-    "styles.css",
 }
 
-app = Flask(__name__, static_folder=None)
+app = Flask(__name__, static_folder="static", template_folder="templates")
 
 
 def db():
@@ -80,6 +76,15 @@ def init_db():
                 priority TEXT NOT NULL,
                 exam_date TEXT,
                 source TEXT,
+                updated_at INTEGER NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS mindmaps (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                data TEXT NOT NULL,
                 updated_at INTEGER NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
@@ -242,14 +247,14 @@ def files(filename):
     if filename.startswith("api/"):
         return jsonify({"error": "Not found"}), 404
 
-    path = ROOT / filename
+    path = ROOT / "templates" / filename
     if not path.is_file():
         return jsonify({"error": "Not found"}), 404
 
     if filename not in PUBLIC_FILES and current_user() is None:
         return redirect("/login.html")
 
-    return send_from_directory(ROOT, filename)
+    return send_from_directory(ROOT / "templates", filename)
 
 
 @app.get("/api/me")
@@ -476,6 +481,78 @@ def api_notes_delete():
         return jsonify({"error": "Note id is required"}), 400
     with db() as connection:
         connection.execute("DELETE FROM notes WHERE user_id = ? AND id = ?", (user["id"], note_id))
+    return jsonify({"ok": True})
+
+
+@app.get("/api/mindmaps")
+def api_mindmaps_get():
+    user, error = require_user()
+    if error:
+        return error
+    mindmap_id = request.args.get("id")
+    with db() as connection:
+        if mindmap_id:
+            rows = connection.execute(
+                "SELECT id, title, data, updated_at FROM mindmaps WHERE user_id = ? AND id = ?",
+                (user["id"], mindmap_id),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                "SELECT id, title, data, updated_at FROM mindmaps WHERE user_id = ? ORDER BY updated_at DESC",
+                (user["id"],),
+            ).fetchall()
+    mindmaps = [{"id": row["id"], "title": row["title"], "data": row["data"], "updatedAt": row["updated_at"]} for row in rows]
+    return jsonify({"mindmaps": mindmaps})
+
+
+@app.post("/api/mindmaps")
+def api_mindmaps_post():
+    user, error = require_user()
+    if error:
+        return error
+    data = request.get_json(force=True, silent=True) or {}
+    mindmap_id = data.get("id") or secrets.token_urlsafe(12)
+    title = data.get("title", "").strip() or "Untitled mindmap"
+    mindmap_data = data.get("data", {})
+    
+    with db() as connection:
+        connection.execute(
+            "INSERT INTO mindmaps (id, user_id, title, data, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (mindmap_id, user["id"], title, json.dumps(mindmap_data), int(time.time())),
+        )
+    return jsonify({"id": mindmap_id, "ok": True})
+
+
+@app.put("/api/mindmaps")
+def api_mindmaps_put():
+    user, error = require_user()
+    if error:
+        return error
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get("id"):
+        return jsonify({"error": "Mindmap id is required"}), 400
+    
+    title = data.get("title", "").strip() or "Untitled mindmap"
+    mindmap_data = data.get("data", {})
+    
+    with db() as connection:
+        connection.execute(
+            "UPDATE mindmaps SET title = ?, data = ?, updated_at = ? WHERE user_id = ? AND id = ?",
+            (title, json.dumps(mindmap_data), int(time.time()), user["id"], data["id"]),
+        )
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/mindmaps")
+def api_mindmaps_delete():
+    user, error = require_user()
+    if error:
+        return error
+    mindmap_id = request.args.get("id")
+    if not mindmap_id:
+        return jsonify({"error": "Mindmap id is required"}), 400
+    with db() as connection:
+        connection.execute("DELETE FROM mindmaps WHERE user_id = ? AND id = ?", (user["id"], mindmap_id))
     return jsonify({"ok": True})
 
 

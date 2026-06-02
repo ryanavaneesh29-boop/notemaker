@@ -1,10 +1,18 @@
-<!DOCTYPE html>
+import os
+import shutil
+from pathlib import Path
+
+root = Path(r"c:\Users\ryana\OneDrive\Документы\revision")
+
+# HTML file contents with updated paths
+templates = {
+    "index.html": '''<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Note Maker</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <aside class="sidebar" aria-label="Subjects">
@@ -25,6 +33,8 @@
       <span aria-hidden="true">+</span>
       Add subject
     </a>
+
+    <a class="add-subject-link" href="mindmaps.html">Mind Maps</a>
 
     <a class="add-subject-link" href="/logout">Logout</a>
 
@@ -139,7 +149,67 @@
     </section>
   </main>
 
-  <script src="page-state.js"></script>
-  <script src="script.js"></script>
+  <script src="/static/js/page-state.js"></script>
+  <script src="/static/js/script.js"></script>
 </body>
-</html>
+</html>''',
+    "login.html": '''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Note Maker</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="subject-page">
+  <main class="login-page">
+    <section class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark" aria-hidden="true">G</div>
+        <div>
+          <h1>Note Maker</h1>
+          <p>Sign in to save notes to your account</p>
+        </div>
+      </div>
+
+      <form id="loginForm">
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" required>
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" required>
+        </div>
+        <p class="login-error" id="loginError" role="alert"></p>
+        <div class="actions">
+          <button class="secondary" id="resetPasswordButton" type="button">Reset password</button>
+          <button class="secondary" id="createAccountButton" type="button">Create account</button>
+          <button class="primary" type="submit">Login</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/static/js/login.js"></script>
+</body>
+</html>'''
+}
+
+# Create directories
+print("Creating directories...")
+os.makedirs(root / "data", exist_ok=True)
+os.makedirs(root / "templates", exist_ok=True)
+os.makedirs(root / "static" / "css", exist_ok=True)
+os.makedirs(root / "static" / "js", exist_ok=True)
+print("✓ Directories created")
+
+# Write template files
+print("\nWriting template files...")
+for name, content in templates.items():
+    path = root / "templates" / name
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print(f"✓ {name} created")
+
+print("\n✓ Script complete!")

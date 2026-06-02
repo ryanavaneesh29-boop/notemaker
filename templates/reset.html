@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Password - Note Maker</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="subject-page">
+  <main class="login-page">
+    <section class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark" aria-hidden="true">G</div>
+        <div>
+          <h1>Reset Password</h1>
+          <p>Enter your email and we will send a reset link</p>
+        </div>
+      </div>
+
+      <form id="resetForm">
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" required>
+        </div>
+        <p class="login-error" id="resetMessage" role="alert"></p>
+        <p class="dev-reset-link" id="devResetLink"></p>
+        <div class="actions">
+          <a class="secondary auth-link" href="login.html">Back to login</a>
+          <button class="primary" type="submit">Send reset link</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/static/js/reset.js"></script>
+</body>
+</html>
