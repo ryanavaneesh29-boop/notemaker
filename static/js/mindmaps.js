@@ -1,92 +1,217 @@
 let currentMindmap = null;
 let mindmapEditor = null;
+let selectedNode = null;
+let panX = 0;
+let panY = 0;
+let zoom = 1;
 
 async function initMindmapEditor() {
-    const container = document.getElementById('mindmapContainer');
-    
-    // Initialize MindElixir library
-    const options = {
-        container: 'mindmapContainer',
-        editable: true,
-        contextMenu: true,
-        locale: 'en',
-    };
+    const canvas = document.getElementById('mindmapCanvas');
+    const ctx = canvas.getContext('2d');
 
-    // Create a simple mind map editor using SVG and canvas
+    // Set canvas size
+    function resizeCanvas() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        redraw();
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
     mindmapEditor = {
-        data: {},
-        container: container,
+        data: { id: 'root', title: 'Central Idea', children: [] },
+        canvas: canvas,
+        ctx: ctx,
+        nodes: [],
+        
         draw: function() {
-            this.container.innerHTML = '';
-            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('width', '100%');
-            svg.setAttribute('height', '100%');
-            svg.setAttribute('style', 'border: 1px solid #eee;');
+            this.ctx.fillStyle = '#fafafa';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-            if (Object.keys(this.data).length === 0) {
-                this.data = { title: 'Central Idea', children: [] };
+            this.ctx.save();
+            this.ctx.translate(panX, panY);
+            this.ctx.scale(zoom, zoom);
+
+            this.nodes = [];
+            this.drawNode(this.data, this.canvas.width / 2 / zoom - panX / zoom, 80);
+
+            this.ctx.restore();
+        },
+
+        drawNode: function(node, x, y) {
+            const nodeObj = { id: node.id, x, y, title: node.title, radius: 45 };
+            this.nodes.push(nodeObj);
+
+            // Draw connections first (behind nodes)
+            if (node.children && node.children.length > 0) {
+                node.children.forEach((child, i) => {
+                    const angle = (Math.PI * 2 / node.children.length) * i - Math.PI / 2;
+                    const childX = x + Math.cos(angle) * 200;
+                    const childY = y + Math.sin(angle) * 200;
+
+                    // Draw curved connector
+                    this.ctx.strokeStyle = '#ccc';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, y);
+                    const controlX = (x + childX) / 2;
+                    const controlY = (y + childY) / 2 + 50;
+                    this.ctx.quadraticCurveTo(controlX, controlY, childX, childY);
+                    this.ctx.stroke();
+
+                    this.drawNode(child, childX, childY);
+                });
             }
 
-            drawNode(svg, this.data, 400, 50);
-            this.container.appendChild(svg);
+            // Draw node box
+            const boxWidth = 100;
+            const boxHeight = 50;
+            const isRoot = node.id === 'root';
+            const isSelected = selectedNode && selectedNode.id === node.id;
+
+            this.ctx.fillStyle = isRoot ? '#007bff' : '#6c757d';
+            if (isSelected) {
+                this.ctx.fillStyle = '#0056b3';
+                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                this.ctx.shadowBlur = 10;
+            }
+
+            this.ctx.fillRect(x - boxWidth / 2, y - boxHeight / 2, boxWidth, boxHeight);
+            this.ctx.shadowColor = 'transparent';
+
+            // Draw border
+            this.ctx.strokeStyle = isSelected ? '#002a5c' : '#004085';
+            this.ctx.lineWidth = isSelected ? 3 : 2;
+            this.ctx.strokeRect(x - boxWidth / 2, y - boxHeight / 2, boxWidth, boxHeight);
+
+            // Draw text
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = 'bold 13px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            const text = node.title.substring(0, 12);
+            this.ctx.fillText(text, x, y - 5);
+
+            // Draw add button
+            if (isSelected) {
+                this.ctx.fillStyle = '#28a745';
+                this.ctx.beginPath();
+                this.ctx.arc(x + boxWidth / 2 + 15, y - boxHeight / 2 - 15, 12, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = 'bold 16px Arial';
+                this.ctx.fillText('+', x + boxWidth / 2 + 15, y - boxHeight / 2 - 15);
+            }
+
+            nodeObj.boxWidth = boxWidth;
+            nodeObj.boxHeight = boxHeight;
         },
+
+        getData: function() {
+            return this.data;
+        },
+
         setData: function(data) {
             this.data = data;
             this.draw();
-        },
-        getData: function() {
-            return this.data;
         }
     };
 
-    function drawNode(svg, node, x, y) {
-        // Draw node circle
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('cx', x);
-        circle.setAttribute('cy', y);
-        circle.setAttribute('r', '30');
-        circle.setAttribute('fill', '#007bff');
-        circle.setAttribute('stroke', '#0056b3');
-        circle.setAttribute('stroke-width', '2');
-        svg.appendChild(circle);
-
-        // Draw text
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', x);
-        text.setAttribute('y', y);
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('dy', '0.3em');
-        text.setAttribute('fill', 'white');
-        text.setAttribute('font-size', '12');
-        text.setAttribute('font-weight', 'bold');
-        text.textContent = node.title || 'Node';
-        svg.appendChild(text);
-
-        // Draw children
-        if (node.children && node.children.length > 0) {
-            const angleStep = (Math.PI * 2) / node.children.length;
-            node.children.forEach((child, i) => {
-                const angle = angleStep * i;
-                const childX = x + Math.cos(angle) * 150;
-                const childY = y + Math.sin(angle) * 150;
-
-                // Draw line
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('x1', x);
-                line.setAttribute('y1', y);
-                line.setAttribute('x2', childX);
-                line.setAttribute('y2', childY);
-                line.setAttribute('stroke', '#ddd');
-                line.setAttribute('stroke-width', '1');
-                svg.appendChild(line);
-
-                drawNode(svg, child, childX, childY);
-            });
-        }
+    function redraw() {
+        mindmapEditor.draw();
     }
 
-    mindmapEditor.draw();
+    // Canvas interactions
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - panX) / zoom;
+        const y = (e.clientY - rect.top - panY) / zoom;
+
+        for (let node of mindmapEditor.nodes) {
+            if (Math.abs(x - node.x) < node.radius && Math.abs(y - node.y) < node.radius) {
+                selectedNode = node;
+
+                // Check if add button clicked
+                if (node.x + node.boxWidth / 2 + 15 - x < 15 && node.y - node.boxHeight / 2 - 15 - y < 15) {
+                    addChildNode(node);
+                    redraw();
+                    return;
+                }
+
+                // Double click to edit
+                if (e.detail === 2) {
+                    editNode(node);
+                }
+                redraw();
+                return;
+            }
+        }
+        selectedNode = null;
+        redraw();
+    });
+
+    canvas.addEventListener('dblclick', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - panX) / zoom;
+        const y = (e.clientY - rect.top - panY) / zoom;
+
+        for (let node of mindmapEditor.nodes) {
+            if (Math.abs(x - node.x) < node.radius && Math.abs(y - node.y) < node.radius) {
+                editNode(node);
+                return;
+            }
+        }
+    });
+
     loadMindmaps();
+}
+
+function addChildNode(parentNode) {
+    function findNodeInData(node, targetId) {
+        if (node.id === targetId) return node;
+        if (node.children) {
+            for (let child of node.children) {
+                const found = findNodeInData(child, targetId);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    const parent = findNodeInData(mindmapEditor.data, parentNode.id);
+    if (!parent) return;
+
+    const newNode = {
+        id: 'node-' + Date.now(),
+        title: 'New Topic',
+        children: []
+    };
+
+    if (!parent.children) parent.children = [];
+    parent.children.push(newNode);
+
+    selectedNode = { id: newNode.id };
+    editNode(selectedNode);
+}
+
+function editNode(node) {
+    const newTitle = prompt('Edit topic:', node.title || '');
+    if (newTitle !== null) {
+        function updateNodeInData(dataNode, targetId) {
+            if (dataNode.id === targetId) {
+                dataNode.title = newTitle.substring(0, 30);
+                return true;
+            }
+            if (dataNode.children) {
+                for (let child of dataNode.children) {
+                    if (updateNodeInData(child, targetId)) return true;
+                }
+            }
+            return false;
+        }
+        updateNodeInData(mindmapEditor.data, node.id);
+        mindmapEditor.draw();
+    }
 }
 
 async function loadMindmaps() {
@@ -134,6 +259,10 @@ async function loadMindmap(id) {
             ? JSON.parse(currentMindmap.data) 
             : currentMindmap.data;
         
+        // Ensure data has required structure
+        if (!data.id) data.id = 'root';
+        if (!data.children) data.children = [];
+        
         mindmapEditor.setData(data);
 
         // Mark as active
@@ -155,7 +284,7 @@ async function newMindmap() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 title: title,
-                data: { title: title, children: [] }
+                data: { id: 'root', title: title, children: [] }
             })
         });
 
@@ -168,11 +297,11 @@ async function newMindmap() {
         currentMindmap = {
             id: json.id,
             title: title,
-            data: JSON.stringify({ title: title, children: [] })
+            data: JSON.stringify({ id: 'root', title: title, children: [] })
         };
 
         document.getElementById('mindmapTitle').value = title;
-        mindmapEditor.setData({ title: title, children: [] });
+        mindmapEditor.setData({ id: 'root', title: title, children: [] });
 
         loadMindmaps();
     } catch (err) {
@@ -213,13 +342,16 @@ async function saveMindmap() {
     }
 }
 
-async function deleteMindmap(id, event) {
-    event.stopPropagation();
+async function deleteCurrent() {
+    if (!currentMindmap) {
+        alert('Please load a mindmap first');
+        return;
+    }
 
     if (!confirm('Delete this mind map?')) return;
 
     try {
-        const res = await fetch(`/api/mindmaps?id=${id}`, {
+        const res = await fetch(`/api/mindmaps?id=${currentMindmap.id}`, {
             method: 'DELETE'
         });
 
@@ -228,12 +360,9 @@ async function deleteMindmap(id, event) {
             return;
         }
 
-        if (currentMindmap && currentMindmap.id === id) {
-            currentMindmap = null;
-            document.getElementById('mindmapTitle').value = '';
-            mindmapEditor.setData({ title: 'Central Idea', children: [] });
-        }
-
+        currentMindmap = null;
+        document.getElementById('mindmapTitle').value = '';
+        mindmapEditor.setData({ id: 'root', title: 'Central Idea', children: [] });
         loadMindmaps();
     } catch (err) {
         console.error('Error deleting mindmap:', err);

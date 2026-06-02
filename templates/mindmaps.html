@@ -157,9 +157,10 @@
             <div class="mindmap-header">
                 <input type="text" id="mindmapTitle" placeholder="Enter mind map title..." />
                 <button onclick="saveMindmap()">Save</button>
+                <button onclick="deleteCurrent()" style="background-color: #dc3545;">Delete</button>
             </div>
             <div class="mindmap-canvas">
-                <div id="mindmapContainer"></div>
+                <canvas id="mindmapCanvas" style="cursor: pointer; width: 100%; height: 100%; display: block;"></canvas>
             </div>
         </div>
     </div>
