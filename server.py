@@ -216,6 +216,7 @@ def set_session_cookie(response, token):
         max_age=SESSION_SECONDS,
         httponly=True,
         samesite="Lax",
+        secure=request.is_secure,
     )
     return response
 
@@ -263,6 +264,25 @@ def api_me():
     if error:
         return error
     return jsonify({"user": user})
+
+
+@app.delete("/api/account")
+def api_delete_account():
+    user, error = require_user()
+    if error:
+        return error
+
+    with db() as connection:
+        connection.execute("DELETE FROM password_resets WHERE user_id = ?", (user["id"],))
+        connection.execute("DELETE FROM sessions WHERE user_id = ?", (user["id"],))
+        connection.execute("DELETE FROM notes WHERE user_id = ?", (user["id"],))
+        connection.execute("DELETE FROM mindmaps WHERE user_id = ?", (user["id"],))
+        connection.execute("DELETE FROM subjects WHERE user_id = ?", (user["id"],))
+        connection.execute("DELETE FROM users WHERE id = ?", (user["id"],))
+
+    response = jsonify({"ok": True})
+    response.delete_cookie("revision_session")
+    return response
 
 
 @app.post("/api/register")

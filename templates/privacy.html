@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Note Maker</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="subject-page">
+  <main class="subject-picker notes-page">
+    <header class="picker-header">
+      <div>
+        <p class="eyebrow">Privacy</p>
+        <h1>Privacy Policy</h1>
+      </div>
+    </header>
+
+    <section class="notes-browser">
+      <div class="notes-browser-tools">
+        <p>Note Maker is designed to keep your data safe and private.</p>
+      </div>
+
+      <div class="notes-tab-list" style="display: grid; gap: 16px;">
+        <div class="note-tab">
+          <h3>What we collect</h3>
+          <p>We store your account email, username, notes, subjects, and mind maps so your work is saved between sessions.</p>
+        </div>
+
+        <div class="note-tab">
+          <h3>Why we store it</h3>
+          <p>Your data is used only to authenticate your account, save your notes, mind maps, and subject preferences, and support password reset requests.</p>
+        </div>
+
+        <div class="note-tab">
+          <h3>Cookies and local storage</h3>
+          <p>We use an essential session cookie to keep you logged in. We also use local storage only for interface state like the last page you visited.</p>
+        </div>
+
+        <div class="note-tab">
+          <h3>Your rights</h3>
+          <p>You can delete your account and all saved content directly from this page if you are signed in.</p>
+        </div>
+
+        <div class="note-tab">
+          <h3>Tracking</h3>
+          <p>Note Maker does not use analytics or third-party tracking scripts. Your usage is not monitored beyond the data you explicitly save.</p>
+        </div>
+
+        <div class="note-tab">
+          <h3>Delete account</h3>
+          <p>Deleting your account removes all associated notes, mind maps, subjects, and login information from this service.</p>
+          <div class="actions">
+            <button class="secondary" id="deleteAccountButton" type="button">Delete my account</button>
+          </div>
+          <p class="login-error" id="deleteAccountMessage" role="alert"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/js/privacy.js"></script>
+  <script src="/static/js/page-state.js"></script>
+</body>
+</html>

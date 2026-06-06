@@ -27,4 +27,32 @@
       sessionStorage.setItem(internalNavKey, "true");
     }
   });
+
+  const cookieConsentKey = "gcse-cookie-consent";
+  const privacyPolicyUrl = "/privacy.html";
+
+  function createCookieBanner() {
+    if (localStorage.getItem(cookieConsentKey) === "accepted") {
+      return;
+    }
+
+    const banner = document.createElement("div");
+    banner.className = "cookie-banner";
+    banner.innerHTML = `
+      <div class="cookie-banner-copy">
+        <p>Note Maker uses essential cookies only to keep you signed in and save your notes. No analytics or third-party tracking is used.</p>
+        <p><a href="${privacyPolicyUrl}">Read our privacy policy</a> for details.</p>
+      </div>
+      <button type="button" class="cookie-banner-action">Accept</button>
+    `;
+
+    banner.querySelector(".cookie-banner-action").addEventListener("click", () => {
+      localStorage.setItem(cookieConsentKey, "accepted");
+      banner.remove();
+    });
+
+    document.body.appendChild(banner);
+  }
+
+  createCookieBanner();
 })();

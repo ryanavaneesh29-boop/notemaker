@@ -118,4 +118,11 @@ function render() {
 
 notesSearch.addEventListener("input", renderNotes);
 
+document.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "p") {
+    event.preventDefault();
+    window.print();
+  }
+});
+
 loadData();
