@@ -1088,3 +1088,49 @@ textarea {
   color: #fff;
   font-weight: 800;
 }
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .sidebar,
+  .topbar,
+  .doc-toolbar,
+  .actions,
+  .back-link,
+  .header-actions,
+  .subject-list,
+  .mindmap-sidebar,
+  .mindmap-header,
+  .notes-subject-tabs,
+  .notes-browser-tools,
+  .notes-tab-list,
+  .cookie-banner,
+  .brand,
+  .subject-picker {
+    display: none !important;
+  }
+
+  .workspace,
+  .editor-panel,
+  .document-page {
+    width: auto !important;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .document-page {
+    min-height: auto;
+  }
+
+  .document-page * {
+    color: #000 !important;
+    background: transparent !important;
+    -webkit-print-color-adjust: exact;
+  }
+}

@@ -221,11 +221,11 @@ async function newMindmap() {
         currentMindmap = {
             id: json.id,
             title: title,
-            data: JSON.stringify({ id: 'root', title: title, x: 450, y: 80, children: [] })
+            data: { id: 'root', title: title, x: 450, y: 80, children: [] }
         };
 
         document.getElementById('mindmapTitle').value = title;
-        mindmapEditor.setData({ id: 'root', title: title, x: 450, y: 80, children: [] });
+        mindmapEditor.setData(currentMindmap.data);
 
         loadMindmaps();
     } catch (err) {
@@ -290,6 +290,76 @@ async function deleteCurrent() {
         loadMindmaps();
     } catch (err) {
         console.error('Error deleting mindmap:', err);
+    }
+}
+
+function findNodeById(dataNode, id) {
+    if (dataNode.id === id) return dataNode;
+    if (!dataNode.children) return null;
+    for (let child of dataNode.children) {
+        const found = findNodeById(child, id);
+        if (found) return found;
+    }
+    return null;
+}
+
+function removeNodeById(dataNode, id) {
+    if (!dataNode.children) return false;
+    const index = dataNode.children.findIndex((child) => child.id === id);
+    if (index >= 0) {
+        dataNode.children.splice(index, 1);
+        return true;
+    }
+    for (let child of dataNode.children) {
+        if (removeNodeById(child, id)) return true;
+    }
+    return false;
+}
+
+function addChildNode() {
+    const selectedId = selectedNode?.id || 'root';
+    const target = findNodeById(mindmapEditor.data, selectedId);
+    if (!target) return;
+
+    const title = prompt('Enter a new subtopic title:', 'New topic');
+    if (!title) return;
+
+    target.children = target.children || [];
+    target.children.push({
+        id: `${selectedId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title: title.substring(0, 30),
+        x: target.x + 180,
+        y: target.y + 0,
+        children: []
+    });
+
+    mindmapEditor.draw();
+}
+
+function renameSelectedNode() {
+    if (!selectedNode) {
+        alert('Select a topic first to rename it.');
+        return;
+    }
+
+    const newTitle = prompt('Rename topic:', selectedNode.title);
+    if (newTitle === null) return;
+    const node = findNodeById(mindmapEditor.data, selectedNode.id);
+    if (!node) return;
+    node.title = newTitle.substring(0, 30);
+    mindmapEditor.draw();
+}
+
+function deleteSelectedNode() {
+    if (!selectedNode || selectedNode.id === 'root') {
+        alert('Select a non-root topic to delete.');
+        return;
+    }
+
+    if (!confirm('Delete the selected topic?')) return;
+    if (removeNodeById(mindmapEditor.data, selectedNode.id)) {
+        selectedNode = null;
+        mindmapEditor.draw();
     }
 }
 

@@ -55,6 +55,7 @@ const fontSizeSelect = document.querySelector("#fontSizeSelect");
 const textColour = document.querySelector("#textColour");
 const highlightColour = document.querySelector("#highlightColour");
 const mathInsertSelect = document.querySelector("#mathInsertSelect");
+const printNoteButton = document.querySelector("#printNoteButton");
 const pageParams = new URLSearchParams(window.location.search);
 
 let subjects = [];
@@ -373,5 +374,11 @@ mathInsertSelect.addEventListener("change", () => {
   document.execCommand("insertText", false, mathInsertSelect.value);
   mathInsertSelect.value = "";
 });
+
+if (printNoteButton) {
+  printNoteButton.addEventListener("click", () => {
+    window.print();
+  });
+}
 
 loadAccountData();
