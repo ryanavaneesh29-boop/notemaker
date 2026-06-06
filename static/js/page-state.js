@@ -9,8 +9,10 @@
 
   if (fileName === "index.html" && !window.location.search && !window.location.hash && !cameFromInternalLink) {
     const lastPage = localStorage.getItem(key);
+    const authPages = ["login.html", "register.html", "reset.html", "reset-confirm.html"];
+    const lastPageBase = lastPage ? lastPage.split(/[?#]/)[0] : "";
 
-    if (lastPage && !lastPage.startsWith("index.html")) {
+    if (lastPage && !lastPage.startsWith("index.html") && !authPages.includes(lastPageBase)) {
       window.location.replace(lastPage);
       return;
     }
