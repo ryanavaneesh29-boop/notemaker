@@ -14,6 +14,8 @@
         <h1 id="notesPageTitle">English Language Notes</h1>
       </div>
       <div class="header-actions">
+        <a class="back-link" id="dashboardLink" href="dashboard.html">Dashboard</a>
+        <a class="back-link" id="profileLink" href="profile.html">Profile</a>
         <a class="back-link" id="backToEditor" href="index.html?subject=English%20Language">Back to editor</a>
         <a class="back-link" href="/logout">Logout</a>
       </div>
@@ -22,8 +24,25 @@
     <section class="notes-browser">
       <nav class="notes-subject-tabs" id="notesSubjectTabs" aria-label="Note subjects"></nav>
       <div class="notes-browser-tools">
-        <label for="notesSearch">Search this subject</label>
-        <input id="notesSearch" type="search" placeholder="Search notes">
+        <label for="notesSearch">Search notes</label>
+        <input id="notesSearch" type="search" placeholder="Search title, topic, priority, tags">
+        <label for="notesPriorityFilter">Priority</label>
+        <select id="notesPriorityFilter">
+          <option value="">All priorities</option>
+          <option value="Core">Core</option>
+          <option value="Needs practice">Needs practice</option>
+          <option value="Exam ready">Exam ready</option>
+        </select>
+        <label for="notesTagFilter">Tag</label>
+        <input id="notesTagFilter" type="search" placeholder="Filter by tag">
+      </div>
+      <div class="notes-browser-actions">
+        <button class="secondary" id="exportNotesJson">Export JSON</button>
+        <button class="secondary" id="exportNotesMarkdown">Export Markdown</button>
+        <label class="file-upload">
+          Import JSON
+          <input id="importNotesJson" type="file" accept="application/json">
+        </label>
       </div>
       <div class="notes-tab-list" id="notesTabList" aria-label="Notes"></div>
     </section>

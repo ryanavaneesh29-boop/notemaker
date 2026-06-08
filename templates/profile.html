@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Note Maker</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="subject-page">
+  <main class="subject-picker">
+    <header class="picker-header">
+      <div>
+        <p class="eyebrow">Your profile</p>
+        <h1>Account settings</h1>
+      </div>
+      <div class="header-actions">
+        <a class="back-link" href="index.html">Back to notes</a>
+        <a class="back-link" href="dashboard.html">Dashboard</a>
+      </div>
+    </header>
+
+    <section class="profile-panel">
+      <form id="profileForm">
+        <div>
+          <label for="profileUsername">Username</label>
+          <input id="profileUsername" type="text" required>
+        </div>
+        <div>
+          <label for="profileEmail">Email</label>
+          <input id="profileEmail" type="email" required>
+        </div>
+        <div>
+          <label>Last login</label>
+          <p id="profileLastLogin">Loading...</p>
+        </div>
+        <p class="login-error" id="profileMessage" role="alert"></p>
+        <div class="actions">
+          <button class="primary" type="submit">Save profile</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/static/js/profile.js"></script>
+  <script src="/static/js/page-state.js"></script>
+</body>
+</html>

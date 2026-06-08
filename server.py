@@ -22,6 +22,10 @@ PUBLIC_FILES = {
     "reset-confirm.html",
 }
 
+LOGIN_ATTEMPTS = {}
+LOGIN_RATE_LIMIT_WINDOW = 10 * 60
+LOGIN_MAX_ATTEMPTS = 5
+
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
 
@@ -29,6 +33,25 @@ def db():
     connection = sqlite3.connect(DB_PATH)
     connection.row_factory = sqlite3.Row
     return connection
+
+
+def prune_login_attempts():
+    cutoff = int(time.time()) - LOGIN_RATE_LIMIT_WINDOW
+    for ip, timestamps in list(LOGIN_ATTEMPTS.items()):
+        LOGIN_ATTEMPTS[ip] = [ts for ts in timestamps if ts > cutoff]
+        if not LOGIN_ATTEMPTS[ip]:
+            del LOGIN_ATTEMPTS[ip]
+
+
+def record_login_attempt(ip):
+    prune_login_attempts()
+    LOGIN_ATTEMPTS.setdefault(ip, []).append(int(time.time()))
+    return len(LOGIN_ATTEMPTS[ip])
+
+
+def is_rate_limited(ip):
+    prune_login_attempts()
+    return len(LOGIN_ATTEMPTS.get(ip, [])) >= LOGIN_MAX_ATTEMPTS
 
 
 def init_db():
@@ -94,6 +117,16 @@ def init_db():
         if "email" not in columns:
             connection.execute("ALTER TABLE users ADD COLUMN email TEXT")
             connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+        if "last_login" not in columns:
+            connection.execute("ALTER TABLE users ADD COLUMN last_login INTEGER")
+
+        note_columns = {row["name"] for row in connection.execute("PRAGMA table_info(notes)").fetchall()}
+        if "tags" not in note_columns:
+            connection.execute("ALTER TABLE notes ADD COLUMN tags TEXT")
+
+        mindmap_columns = {row["name"] for row in connection.execute("PRAGMA table_info(mindmaps)").fetchall()}
+        if "tags" not in mindmap_columns:
+            connection.execute("ALTER TABLE mindmaps ADD COLUMN tags TEXT")
 
 
 def hash_password(password, salt=None):
@@ -122,7 +155,7 @@ def current_user():
     with db() as connection:
         row = connection.execute(
             """
-            SELECT users.id, users.username, users.email
+            SELECT users.id, users.username, users.email, users.last_login
             FROM sessions
             JOIN users ON users.id = sessions.user_id
             WHERE sessions.token = ? AND sessions.expires_at > ?
@@ -181,6 +214,16 @@ def send_reset_email(email, link):
         return False
 
 
+def normalize_tags(tags):
+    if isinstance(tags, list):
+        tags = [tag.strip() for tag in tags if tag and tag.strip()]
+        return ",".join(sorted(dict.fromkeys(tags)))
+    if isinstance(tags, str):
+        tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
+        return ",".join(sorted(dict.fromkeys(tags)))
+    return ""
+
+
 def note_from_row(row):
     return {
         "id": row["id"],
@@ -191,6 +234,7 @@ def note_from_row(row):
         "priority": row["priority"],
         "examDate": row["exam_date"] or "",
         "source": row["source"],
+        "tags": row["tags"].split(",") if row["tags"] else [],
     }
 
 
@@ -205,6 +249,7 @@ def note_payload(data, user_id):
         data.get("priority", "Core"),
         data.get("examDate", ""),
         data.get("source"),
+        normalize_tags(data.get("tags", "")),
         int(time.time()),
     )
 
@@ -266,6 +311,61 @@ def api_me():
     return jsonify({"user": user})
 
 
+@app.put("/api/me")
+def api_me_put():
+    user, error = require_user()
+    if error:
+        return error
+
+    data = request.get_json(force=True, silent=True) or {}
+    username = data.get("username", "").strip()
+    email = data.get("email", "").strip().lower()
+
+    if len(username) < 3 or "@" not in email or "." not in email:
+        return jsonify({"error": "Use a valid username and email."}), 400
+
+    try:
+        with db() as connection:
+            connection.execute(
+                "UPDATE users SET username = ?, email = ? WHERE id = ?",
+                (username, email, user["id"]),
+            )
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "That email is already taken."}), 409
+
+    return jsonify({"ok": True, "user": {"id": user["id"], "username": username, "email": email, "last_login": user.get("last_login")}})
+
+
+@app.get("/api/dashboard")
+def api_dashboard():
+    user, error = require_user()
+    if error:
+        return error
+
+    now = int(time.time())
+    with db() as connection:
+        notes_count = connection.execute("SELECT COUNT(*) FROM notes WHERE user_id = ?", (user["id"],)).fetchone()[0]
+        subjects_count = connection.execute("SELECT COUNT(*) FROM subjects WHERE user_id = ?", (user["id"],)).fetchone()[0]
+        mindmaps_count = connection.execute("SELECT COUNT(*) FROM mindmaps WHERE user_id = ?", (user["id"],)).fetchone()[0]
+        upcoming = connection.execute(
+            "SELECT title, subject, exam_date FROM notes WHERE user_id = ? AND exam_date != '' ORDER BY exam_date LIMIT 5",
+            (user["id"],),
+        ).fetchall()
+
+    upcoming_exams = [
+        {"title": row["title"], "subject": row["subject"], "examDate": row["exam_date"]}
+        for row in upcoming
+    ]
+
+    return jsonify({
+        "notesCount": notes_count,
+        "subjectsCount": subjects_count,
+        "mindmapsCount": mindmaps_count,
+        "upcomingExams": upcoming_exams,
+        "lastLogin": user.get("last_login"),
+    })
+
+
 @app.delete("/api/account")
 def api_delete_account():
     user, error = require_user()
@@ -298,8 +398,8 @@ def api_register():
     try:
         with db() as connection:
             cursor = connection.execute(
-                "INSERT INTO users (username, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
-                (username, email, hash_password(password), int(time.time())),
+                "INSERT INTO users (username, email, password_hash, created_at, last_login) VALUES (?, ?, ?, ?, ?)",
+                (username, email, hash_password(password), int(time.time()), int(time.time())),
             )
             user_id = cursor.lastrowid
     except sqlite3.IntegrityError:
@@ -314,13 +414,22 @@ def api_login():
     data = request.get_json(force=True, silent=True) or {}
     email = data.get("email", "").strip().lower()
     password = data.get("password", "")
+    ip = request.remote_addr or "unknown"
+
+    if is_rate_limited(ip):
+        return jsonify({"error": "Too many login attempts. Try again in a few minutes."}), 429
 
     with db() as connection:
         user = connection.execute("SELECT * FROM users WHERE lower(email) = ?", (email,)).fetchone()
 
     if not user or not check_password(password, user["password_hash"]):
+        record_login_attempt(ip)
         return jsonify({"error": "Incorrect email or password."}), 401
 
+    with db() as connection:
+        connection.execute("UPDATE users SET last_login = ? WHERE id = ?", (int(time.time()), user["id"]))
+
+    LOGIN_ATTEMPTS.pop(ip, None)
     return create_session(user["id"])
 
 
@@ -460,8 +569,8 @@ def api_notes_post():
     with db() as connection:
         connection.execute(
             """
-            INSERT INTO notes (id, user_id, subject, title, topic, content, priority, exam_date, source, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO notes (id, user_id, subject, title, topic, content, priority, exam_date, source, tags, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             note,
         )
@@ -482,10 +591,10 @@ def api_notes_put():
         connection.execute(
             """
             UPDATE notes
-            SET subject = ?, title = ?, topic = ?, content = ?, priority = ?, exam_date = ?, source = ?, updated_at = ?
+            SET subject = ?, title = ?, topic = ?, content = ?, priority = ?, exam_date = ?, source = ?, tags = ?, updated_at = ?
             WHERE user_id = ? AND id = ?
             """,
-            (note[2], note[3], note[4], note[5], note[6], note[7], note[8], note[9], user["id"], data["id"]),
+            (note[2], note[3], note[4], note[5], note[6], note[7], note[8], note[9], note[10], user["id"], data["id"]),
         )
         connection.execute("INSERT OR IGNORE INTO subjects (user_id, name) VALUES (?, ?)", (user["id"], data.get("subject")))
     return jsonify({"ok": True})
@@ -513,15 +622,21 @@ def api_mindmaps_get():
     with db() as connection:
         if mindmap_id:
             rows = connection.execute(
-                "SELECT id, title, data, updated_at FROM mindmaps WHERE user_id = ? AND id = ?",
+                "SELECT id, title, data, tags, updated_at FROM mindmaps WHERE user_id = ? AND id = ?",
                 (user["id"], mindmap_id),
             ).fetchall()
         else:
             rows = connection.execute(
-                "SELECT id, title, data, updated_at FROM mindmaps WHERE user_id = ? ORDER BY updated_at DESC",
+                "SELECT id, title, data, tags, updated_at FROM mindmaps WHERE user_id = ? ORDER BY updated_at DESC",
                 (user["id"],),
             ).fetchall()
-    mindmaps = [{"id": row["id"], "title": row["title"], "data": row["data"], "updatedAt": row["updated_at"]} for row in rows]
+    mindmaps = [{
+        "id": row["id"],
+        "title": row["title"],
+        "data": row["data"],
+        "tags": row["tags"].split(",") if row["tags"] else [],
+        "updatedAt": row["updated_at"],
+    } for row in rows]
     return jsonify({"mindmaps": mindmaps})
 
 
@@ -534,11 +649,12 @@ def api_mindmaps_post():
     mindmap_id = data.get("id") or secrets.token_urlsafe(12)
     title = data.get("title", "").strip() or "Untitled mindmap"
     mindmap_data = data.get("data", {})
+    tags = normalize_tags(data.get("tags", ""))
     
     with db() as connection:
         connection.execute(
-            "INSERT INTO mindmaps (id, user_id, title, data, updated_at) VALUES (?, ?, ?, ?, ?)",
-            (mindmap_id, user["id"], title, json.dumps(mindmap_data), int(time.time())),
+            "INSERT INTO mindmaps (id, user_id, title, data, tags, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (mindmap_id, user["id"], title, json.dumps(mindmap_data), tags, int(time.time())),
         )
     return jsonify({"id": mindmap_id, "ok": True})
 
@@ -554,11 +670,12 @@ def api_mindmaps_put():
     
     title = data.get("title", "").strip() or "Untitled mindmap"
     mindmap_data = data.get("data", {})
+    tags = normalize_tags(data.get("tags", ""))
     
     with db() as connection:
         connection.execute(
-            "UPDATE mindmaps SET title = ?, data = ?, updated_at = ? WHERE user_id = ? AND id = ?",
-            (title, json.dumps(mindmap_data), int(time.time()), user["id"], data["id"]),
+            "UPDATE mindmaps SET title = ?, data = ?, tags = ?, updated_at = ? WHERE user_id = ? AND id = ?",
+            (title, json.dumps(mindmap_data), tags, int(time.time()), user["id"], data["id"]),
         )
     return jsonify({"ok": True})
 

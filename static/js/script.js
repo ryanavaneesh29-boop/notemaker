@@ -44,9 +44,15 @@ const myNotesLink = document.querySelector("#myNotesLink");
 const noteForm = document.querySelector("#noteForm");
 const noteTitle = document.querySelector("#noteTitle");
 const noteTopic = document.querySelector("#noteTopic");
+const noteTags = document.querySelector("#noteTags");
 const noteContent = document.querySelector("#noteContent");
 const notePriority = document.querySelector("#notePriority");
 const noteExamDate = document.querySelector("#noteExamDate");
+const noteCountdown = document.querySelector("#noteCountdown");
+const shareNoteButton = document.querySelector("#shareNoteButton");
+const markdownModeToggle = document.querySelector("#markdownModeToggle");
+const markdownModeRow = document.querySelector("#markdownModeRow");
+const markdownTextarea = document.querySelector("#markdownTextarea");
 const newNoteButton = document.querySelector("#newNoteButton");
 const clearFormButton = document.querySelector("#clearFormButton");
 const deleteNoteButton = document.querySelector("#deleteNoteButton");
@@ -57,6 +63,14 @@ const highlightColour = document.querySelector("#highlightColour");
 const mathInsertSelect = document.querySelector("#mathInsertSelect");
 const printNoteButton = document.querySelector("#printNoteButton");
 const pageParams = new URLSearchParams(window.location.search);
+const startPomodoroButton = document.querySelector("#startPomodoroButton");
+const pausePomodoroButton = document.querySelector("#pausePomodoroButton");
+const resetPomodoroButton = document.querySelector("#resetPomodoroButton");
+const pomodoroStatus = document.querySelector("#pomodoroStatus");
+const AUTOSAVE_KEY_PREFIX = "gcse-note-draft-";
+let markdownMode = false;
+let pomodoroTimerId = null;
+let pomodoroSeconds = 0;
 
 let subjects = [];
 let notes = [];
@@ -108,6 +122,10 @@ async function loadAccountData() {
     await openOrCreateSyllabusNote(draftTopic, pageParams.get("detail") || "");
   }
 
+  if (!activeNoteId) {
+    restoreDraft();
+  }
+
   render();
 }
 
@@ -144,19 +162,24 @@ function fillForm(note) {
 
   if (!note) {
     noteTitle.value = "";
+    noteTopic.value = "";
+    noteTags.value = "";
     noteContent.innerHTML = "";
     notePriority.value = "Core";
     noteExamDate.value = "";
     deleteNoteButton.disabled = true;
+    updateNoteCountdown({ examDate: "" });
     return;
   }
 
   noteTitle.value = note.title;
   noteTopic.value = note.topic;
+  noteTags.value = Array.isArray(note.tags) ? note.tags.join(", ") : note.tags || "";
   noteContent.innerHTML = textToDocumentHtml(note.content);
   notePriority.value = note.priority;
   noteExamDate.value = note.examDate;
   deleteNoteButton.disabled = false;
+  updateNoteCountdown(note);
 }
 
 function render() {
@@ -198,16 +221,235 @@ function populateTopicOptions(selectedTopic = "") {
   noteTopic.value = selectedTopic;
 }
 
+function parseTags(value) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag)
+    .filter((tag, index, arr) => arr.indexOf(tag) === index);
+}
+
+function noteDraftKey() {
+  return `${AUTOSAVE_KEY_PREFIX}${activeSubject}`;
+}
+
+function saveDraft() {
+  if (!noteTitle || !noteContent) return;
+  const draft = {
+    title: noteTitle.value,
+    topic: noteTopic.value,
+    content: noteContent.innerHTML,
+    priority: notePriority.value,
+    examDate: noteExamDate.value,
+    tags: noteTags?.value || "",
+    timestamp: Date.now(),
+  };
+  localStorage.setItem(noteDraftKey(), JSON.stringify(draft));
+}
+
+function loadDraft() {
+  const data = localStorage.getItem(noteDraftKey());
+  if (!data) return null;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  localStorage.removeItem(noteDraftKey());
+}
+
+function updateNoteCountdown(note) {
+  if (!noteCountdown) return;
+  if (!note || !note.examDate) {
+    noteCountdown.textContent = "No exam date set.";
+    return;
+  }
+
+  const targetDate = new Date(note.examDate);
+  const now = new Date();
+  const ms = targetDate - now;
+  if (ms <= 0) {
+    noteCountdown.textContent = "Exam date has passed.";
+    return;
+  }
+
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((ms / (1000 * 60)) % 60);
+  noteCountdown.textContent = `Exam in ${days}d ${hours}h ${minutes}m`;
+}
+
+function htmlToMarkdown(html) {
+  if (!html) return "";
+  return html
+    .replace(/<h3>(.*?)<\/h3>/gi, "### $1\n\n")
+    .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
+    .replace(/<b>(.*?)<\/b>/gi, "**$1**")
+    .replace(/<em>(.*?)<\/em>/gi, "*$1*")
+    .replace(/<i>(.*?)<\/i>/gi, "*$1*")
+    .replace(/<u>(.*?)<\/u>/gi, "$1")
+    .replace(/<li>(.*?)<\/li>/gi, "- $1\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<p>(.*?)<\/p>/gi, "$1\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function markdownToHtml(text) {
+  if (!text) return "";
+  const lines = text.replace(/\r/g, "").split("\n");
+  let html = "";
+  let inList = false;
+
+  function closeList() {
+    if (inList) {
+      html += "</ul>";
+      inList = false;
+    }
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      closeList();
+      html += "<p><br></p>";
+      continue;
+    }
+
+    if (/^###\s+/.test(trimmed)) {
+      closeList();
+      html += `<h3>${trimmed.replace(/^###\s+/, "")}</h3>`;
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(trimmed)) {
+      if (!inList) {
+        inList = true;
+        html += "<ul>";
+      }
+      const item = trimmed.replace(/^[-*]\s+/, "");
+      html += `<li>${item}</li>`;
+      continue;
+    }
+
+    closeList();
+    let content = trimmed
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>");
+    html += `<p>${content}</p>`;
+  }
+
+  closeList();
+  return html;
+}
+
+function updateMarkdownMode() {
+  if (!markdownModeToggle || !markdownModeRow || !markdownTextarea || !noteContent) return;
+  markdownMode = !markdownMode;
+  if (markdownMode) {
+    markdownModeRow.style.display = "block";
+    markdownTextarea.value = htmlToMarkdown(noteContent.innerHTML);
+    noteContent.style.display = "none";
+    markdownModeToggle.textContent = "Switch to rich text";
+  } else {
+    const html = markdownToHtml(markdownTextarea.value);
+    noteContent.innerHTML = html;
+    noteContent.style.display = "block";
+    markdownModeRow.style.display = "none";
+    markdownModeToggle.textContent = "Markdown mode";
+  }
+}
+
+function copyShareLink() {
+  if (!activeNoteId) {
+    window.alert("Save a note first to create a shareable link.");
+    return;
+  }
+  const url = `${window.location.origin}/index.html?subject=${encodeURIComponent(activeSubject)}&noteId=${encodeURIComponent(activeNoteId)}`;
+  navigator.clipboard?.writeText(url).then(() => {
+    window.alert("Share link copied to clipboard.");
+  }).catch(() => {
+    window.prompt("Copy this link:", url);
+  });
+}
+
+function startPomodoro(seconds) {
+  clearInterval(pomodoroTimerId);
+  pomodoroSeconds = seconds;
+  pomodoroStatus.textContent = `Focus for ${Math.floor(seconds / 60)} minutes`;
+  pomodoroTimerId = setInterval(() => {
+    pomodoroSeconds -= 1;
+    if (pomodoroSeconds <= 0) {
+      clearInterval(pomodoroTimerId);
+      pomodoroStatus.textContent = "Time is up! Take a short break.";
+      return;
+    }
+    const minutes = Math.floor(pomodoroSeconds / 60);
+    const secondsLeft = pomodoroSeconds % 60;
+    pomodoroStatus.textContent = `Focus: ${minutes}:${secondsLeft.toString().padStart(2, "0")}`;
+  }, 1000);
+}
+
+function pausePomodoro() {
+  clearInterval(pomodoroTimerId);
+  pomodoroStatus.textContent = "Paused";
+}
+
+function resetPomodoro() {
+  clearInterval(pomodoroTimerId);
+  pomodoroSeconds = 0;
+  pomodoroStatus.textContent = "Ready to focus";
+}
+
+function attachAutoSaveEvents() {
+  const inputs = [noteTitle, noteTopic, notePriority, noteExamDate, noteTags];
+  inputs.forEach((input) => {
+    input?.addEventListener("input", saveDraft);
+  });
+  noteContent?.addEventListener("input", saveDraft);
+}
+
+function restoreDraft() {
+  const draft = loadDraft();
+  if (!draft) return;
+  if (noteTitle) noteTitle.value = draft.title || noteTitle.value;
+  if (noteTopic) noteTopic.value = draft.topic || noteTopic.value;
+  if (noteContent) noteContent.innerHTML = draft.content || noteContent.innerHTML;
+  if (notePriority) notePriority.value = draft.priority || notePriority.value;
+  if (noteExamDate) noteExamDate.value = draft.examDate || noteExamDate.value;
+  if (noteTags) noteTags.value = draft.tags || noteTags.value;
+}
+
+function applyExamCountdown() {
+  const currentNote = notes.find((note) => note.id === activeNoteId);
+  updateNoteCountdown(currentNote || { examDate: noteExamDate.value });
+}
+
+function enableNoteListeners() {
+  shareNoteButton?.addEventListener("click", copyShareLink);
+  markdownModeToggle?.addEventListener("click", updateMarkdownMode);
+  startPomodoroButton?.addEventListener("click", () => startPomodoro(25 * 60));
+  pausePomodoroButton?.addEventListener("click", pausePomodoro);
+  resetPomodoroButton?.addEventListener("click", resetPomodoro);
+}
+
 function createNoteFromForm(existingId) {
+  const contentHtml = markdownMode && markdownTextarea ? markdownToHtml(markdownTextarea.value) : noteContent.innerHTML;
   return {
     id: existingId || makeId(),
     subject: activeSubject,
     title: noteTitle.value.trim(),
     topic: noteTopic.value,
-    content: cleanDocumentHtml(noteContent.innerHTML),
+    content: cleanDocumentHtml(contentHtml),
     priority: notePriority.value,
     examDate: noteExamDate.value,
-    source: existingId ? notes.find((note) => note.id === existingId)?.source : undefined
+    tags: parseTags(noteTags?.value || ""),
+    source: existingId ? notes.find((note) => note.id === existingId)?.source : undefined,
   };
 }
 
@@ -381,4 +623,6 @@ if (printNoteButton) {
   });
 }
 
+attachAutoSaveEvents();
+enableNoteListeners();
 loadAccountData();

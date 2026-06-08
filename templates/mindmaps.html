@@ -143,6 +143,8 @@
             <h1>Create and organize your mind maps</h1>
         </div>
         <div class="header-actions">
+            <a class="back-link" href="dashboard.html">Dashboard</a>
+            <a class="back-link" href="profile.html">Profile</a>
             <a class="back-link" href="index.html">Back to notes</a>
             <a class="back-link" href="/logout">Logout</a>
         </div>
@@ -152,15 +154,21 @@
         <aside class="mindmap-sidebar">
             <button class="mindmap-new-btn" onclick="newMindmap()">+ New Mind Map</button>
             <div class="mindmap-list-header">Your Mind Maps</div>
+            <div class="mindmap-filter-row">
+                <input id="mindmapSearch" type="search" placeholder="Search titles or tags">
+                <input id="mindmapTagFilter" type="search" placeholder="Filter by tag">
+            </div>
             <ul class="mindmap-list" id="mindmapList"></ul>
         </aside>
 
         <section class="mindmap-editor-area">
             <div class="mindmap-header">
                 <input type="text" id="mindmapTitle" placeholder="Enter mind map title..." />
+                <input type="text" id="mindmapTags" placeholder="Tags (comma separated)" />
                 <button onclick="addChildNode()">Add topic</button>
                 <button onclick="renameSelectedNode()">Rename topic</button>
                 <button onclick="saveMindmap()">Save</button>
+                <button class="secondary" id="shareMindmapButton" type="button">Share</button>
                 <button class="danger" onclick="deleteCurrent()">Delete</button>
             </div>
             <div class="mindmap-canvas">

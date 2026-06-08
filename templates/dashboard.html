@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Note Maker</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="subject-page">
+  <main class="subject-picker">
+    <header class="picker-header">
+      <div>
+        <p class="eyebrow">Dashboard</p>
+        <h1>Study progress & presets</h1>
+      </div>
+      <div class="header-actions">
+        <a class="back-link" href="index.html">Back to notes</a>
+        <a class="back-link" href="profile.html">Profile</a>
+      </div>
+    </header>
+
+    <section class="dashboard-summary">
+      <div class="dashboard-card">
+        <strong id="notesCount">0</strong>
+        <p>Notes created</p>
+      </div>
+      <div class="dashboard-card">
+        <strong id="subjectsCount">0</strong>
+        <p>Subjects selected</p>
+      </div>
+      <div class="dashboard-card">
+        <strong id="mindmapsCount">0</strong>
+        <p>Mind maps saved</p>
+      </div>
+      <div class="dashboard-card">
+        <strong id="lastLogin">Never</strong>
+        <p>Last login</p>
+      </div>
+    </section>
+
+    <section class="dashboard-presets">
+      <h2>Exam board presets</h2>
+      <p>Save a common subject group and start revision faster.</p>
+      <div id="presetBoardList" class="preset-board-list"></div>
+      <p class="login-error" id="presetMessage" role="alert"></p>
+    </section>
+
+    <section class="dashboard-upcoming">
+      <h2>Upcoming exams</h2>
+      <div id="upcomingExams" class="upcoming-list"></div>
+    </section>
+  </main>
+
+  <script src="/static/js/dashboard.js"></script>
+  <script src="/static/js/page-state.js"></script>
+</body>
+</html>

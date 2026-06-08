@@ -40,8 +40,21 @@
         <h2 id="subjectTitle">English Language</h2>
       </div>
       <div class="topbar-tools">
+        <a class="my-notes-button" id="dashboardLink" href="dashboard.html">Dashboard</a>
+        <a class="my-notes-button" id="profileLink" href="profile.html">Profile</a>
         <a class="my-notes-button" id="myNotesLink" href="notes.html?subject=English%20Language">My notes</a>
         <a class="syllabus-link" id="syllabusLink" href="syllabus.html?subject=English%20Language">View syllabus</a>
+      </div>
+    </section>
+    <section class="timer-panel">
+      <div class="timer-summary">
+        <strong>Pomodoro timer</strong>
+        <span id="pomodoroStatus">Ready to focus</span>
+      </div>
+      <div class="timer-actions">
+        <button class="secondary" id="startPomodoroButton" type="button">Start 25m</button>
+        <button class="secondary" id="pausePomodoroButton" type="button">Pause</button>
+        <button class="secondary" id="resetPomodoroButton" type="button">Reset</button>
       </div>
     </section>
 
@@ -57,6 +70,22 @@
               <label for="noteTopic">Topic</label>
               <select id="noteTopic"></select>
             </div>
+          </div>
+
+          <div class="form-row two-col">
+            <div>
+              <label for="noteTags">Tags</label>
+              <input id="noteTags" type="text" placeholder="comma-separated tags">
+            </div>
+            <div>
+              <label for="markdownModeToggle">Note format</label>
+              <button class="secondary" id="markdownModeToggle" type="button">Markdown mode</button>
+            </div>
+          </div>
+
+          <div class="form-row" id="markdownModeRow" style="display:none;">
+            <label for="markdownTextarea">Markdown editor</label>
+            <textarea id="markdownTextarea" rows="10" placeholder="Write markdown here..."></textarea>
           </div>
 
           <div class="form-row">
@@ -134,7 +163,10 @@
             </div>
           </div>
 
+          <p class="note-countdown" id="noteCountdown"></p>
+
           <div class="actions">
+            <button class="secondary" id="shareNoteButton" type="button">Share</button>
             <button class="secondary" id="deleteNoteButton" type="button">Delete</button>
             <button class="secondary" id="clearFormButton" type="button">Clear</button>
             <button class="primary" type="submit">Save note</button>
